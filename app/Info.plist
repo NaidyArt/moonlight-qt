@@ -9,11 +9,11 @@
 	<key>LSSupportsGameMode</key>
 	<true/>
 	<key>CFBundleGetInfoString</key>
-	<string>Stream games and other applications from another PC</string>
+	<string>Moonlight tuned for AVSampleBufferDisplayLayer on Apple silicon</string>
 	<key>CFBundleIconFile</key>
 	<string>moonlight</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.moonlight-stream.Moonlight</string>
+	<string>art.naidy.moonlight-avsamplebuffer</string>
 	<key>NSHighResolutionCapable</key>
 	<true/>
 	<key>CFBundlePackageType</key>
@@ -51,7 +51,7 @@
 	<key>CFBundleShortVersionString</key>
 	<string>VERSION</string>
 	<key>CFBundleDisplayName</key>
-	<string>Moonlight</string>
+	<string>Moonlight AVSampleBuffer</string>
     <key>LSApplicationCategoryType</key>
 	<string>public.app-category.games</string>
 </dict>

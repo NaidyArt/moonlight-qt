@@ -109,6 +109,14 @@ void StreamingPreferences::reload()
     int defaultVer = settings.value(SER_DEFAULTVER, 0).toInt();
 
 #ifdef Q_OS_DARWIN
+    // AVSampleBufferDisplayLayer is the measured low-latency path for this
+    // dedicated macOS build. Keep the setting user-overridable and persistent.
+    constexpr auto defaultRenderer = RendererSelection::RS_AVSBDL;
+#else
+    constexpr auto defaultRenderer = RendererSelection::RS_AUTO;
+#endif
+
+#ifdef Q_OS_DARWIN
     recommendedFullScreenMode = WindowMode::WM_FULLSCREEN_DESKTOP;
 #else
     // Wayland doesn't support modesetting, so use fullscreen desktop mode
@@ -161,7 +169,7 @@ void StreamingPreferences::reload()
     videoDecoderSelection = static_cast<VideoDecoderSelection>(settings.value(SER_VIDEODEC,
                                                   static_cast<int>(VideoDecoderSelection::VDS_AUTO)).toInt());
     rendererSelection = static_cast<RendererSelection>(settings.value(SER_RENDERER,
-                                                  static_cast<int>(RendererSelection::RS_AUTO)).toInt());
+                                                  static_cast<int>(defaultRenderer)).toInt());
     windowMode = static_cast<WindowMode>(settings.value(SER_WINDOWMODE,
                                                         // Try to load from the old preference value too
                                                         static_cast<int>(settings.value(SER_FULLSCREEN, true).toBool() ?

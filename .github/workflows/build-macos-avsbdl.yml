@@ -1,0 +1,65 @@
+---
+name: Build macOS AVSampleBuffer candidate
+
+permissions:
+  contents: read
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 90
+    env:
+      CI_VERSION: 6.1.0-avsbdl
+
+    steps:
+      - name: Checkout exact source and submodules
+        uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          submodules: recursive
+          fetch-depth: 1
+
+      - name: Verify isolated source variant
+        run: bash scripts/verify-macos-avsbdl-source.sh
+
+      - name: Install create-dmg
+        run: |
+          brew install node
+          npm install --global create-dmg@6.0.0
+
+      - name: Install Qt 6.11.1
+        uses: jurplel/install-qt-action@48d3ad6db93f3627c8ee7a0454bc6f3744f7e730 # v4.3.1
+        with:
+          cache: true
+          version: 6.11.1
+          aqtsource: git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e
+
+      - name: Build universal app, apply ad-hoc signature, and package
+        run: bash scripts/generate-avsbdl-dmg.sh Release
+
+      - name: Verify built app bundle
+        run: bash scripts/verify-macos-avsbdl-bundle.sh 'build/build-Release/app/Moonlight AVSampleBuffer.app'
+
+      - name: Add rollback and documentation to release directory
+        run: |
+          cp 'release-macos/Desinstalar Moonlight AVSampleBuffer.command' build/installer-Release/
+          cp release-macos/README.txt build/installer-Release/
+          chmod 0755 'build/installer-Release/Desinstalar Moonlight AVSampleBuffer.command'
+          cd build/installer-Release
+          shasum -a 256 'Desinstalar Moonlight AVSampleBuffer.command' README.txt >> SHA256SUMS.txt
+          shasum -a 256 -c SHA256SUMS.txt
+
+      - name: Upload installable candidate
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6
+        with:
+          name: Moonlight-macOS-AVSampleBuffer-${{ github.sha }}
+          path: |
+            build/installer-Release/Moonlight-AVSampleBuffer-*.dmg
+            build/installer-Release/Moonlight-AVSampleBuffer-*.app.zip
+            build/installer-Release/Desinstalar Moonlight AVSampleBuffer.command
+            build/installer-Release/README.txt
+            build/installer-Release/SHA256SUMS.txt
+          compression-level: 0
+          if-no-files-found: error
