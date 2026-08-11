@@ -43,6 +43,11 @@ done
 # -n closes the race between the existence check and mv. The postconditions
 # fail closed if another process creates the destination at the same instant.
 /bin/mv -n "$target" "$trash"
+nested_collision="$trash/Moonlight AVSampleBuffer.app"
+if [[ -e "$nested_collision" || -L "$nested_collision" ]]; then
+  print -u2 "Otro proceso creó el destino durante el traslado. La app quedó recuperable en: $nested_collision"
+  exit 1
+fi
 if [[ -e "$target" || -L "$target" || ! -d "$trash" || -L "$trash" ]]; then
   print -u2 'El traslado recuperable no terminó de forma inequívoca; revisa Aplicaciones y la Papelera.'
   exit 1
