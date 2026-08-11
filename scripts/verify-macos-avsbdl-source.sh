@@ -61,6 +61,10 @@ grep -Fq 'QCoreApplication::setApplicationName("Moonlight");' "$main" ||
   fail "upstream QSettings identity changed; paired hosts would not be preserved"
 grep -Fq 'if [ "${SKIP_DMG:-0}" = "1" ]; then' "$root/scripts/generate-dmg.sh" ||
   fail "official macOS build script lacks the isolated packaging handoff"
+grep -Fq "APP_DISPLAY_NAME=\$(\"\$PLIST_BUDDY\" -c 'Print :CFBundleDisplayName'" "$root/scripts/generate-avsbdl-dmg.sh" ||
+  fail "custom packager does not derive the create-dmg name from its signed bundle"
+grep -Fq '[ "${#DMG_CANDIDATES[@]}" -eq 1 ]' "$root/scripts/generate-avsbdl-dmg.sh" ||
+  fail "custom packager does not require exactly one DMG candidate"
 
 metal_experiment_matches=$(find "$root/app" "$root/scripts" -type f \
   ! -name 'verify-macos-avsbdl-source.sh' \

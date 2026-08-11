@@ -26,6 +26,7 @@ if [ -n "${CI_VERSION:-}" ]; then
 else
   VERSION=$(cat "$SOURCE_ROOT/app/version.txt")
 fi
+PLIST_BUDDY=${PLIST_BUDDY:-/usr/libexec/PlistBuddy}
 
 CUSTOM_DMG_BASENAME="Moonlight-AVSampleBuffer-$VERSION.dmg"
 CUSTOM_DMG=$INSTALLER_FOLDER/$CUSTOM_DMG_BASENAME
@@ -43,7 +44,24 @@ mv "$ORIGINAL_APP" "$CUSTOM_APP"
 codesign --force --deep --sign - "$CUSTOM_APP"
 codesign --verify --deep --strict --verbose=2 "$CUSTOM_APP"
 
-if create-dmg "$CUSTOM_APP" "$INSTALLER_FOLDER" --no-version-in-filename; then
+[ -x "$PLIST_BUDDY" ] || fail "PlistBuddy is unavailable: $PLIST_BUDDY"
+APP_DISPLAY_NAME=$("$PLIST_BUDDY" -c 'Print :CFBundleDisplayName' "$CUSTOM_APP/Contents/Info.plist") ||
+  fail "CFBundleDisplayName is unavailable"
+APP_SHORT_VERSION=$("$PLIST_BUDDY" -c 'Print :CFBundleShortVersionString' "$CUSTOM_APP/Contents/Info.plist") ||
+  fail "CFBundleShortVersionString is unavailable"
+for component in "$APP_DISPLAY_NAME" "$APP_SHORT_VERSION"; do
+  [ -n "$component" ] || fail "create-dmg filename component is empty"
+  case "$component" in
+    */*|*$'\n'*|.|..) fail "unsafe create-dmg filename component: $component" ;;
+  esac
+done
+
+shopt -s nullglob
+DMG_CANDIDATES=("$INSTALLER_FOLDER"/*.dmg)
+shopt -u nullglob
+[ "${#DMG_CANDIDATES[@]}" -eq 0 ] || fail "installer directory already contains a DMG"
+
+if create-dmg "$CUSTOM_APP" "$INSTALLER_FOLDER"; then
   CREATE_DMG_STATUS=0
 else
   CREATE_DMG_STATUS=$?
@@ -53,9 +71,16 @@ case $CREATE_DMG_STATUS in
   *) fail "create-dmg failed with status $CREATE_DMG_STATUS" ;;
 esac
 
-GENERATED_DMG=$INSTALLER_FOLDER/Moonlight\ AVSampleBuffer.dmg
-[ -f "$GENERATED_DMG" ] || fail "create-dmg did not produce the expected custom DMG"
+GENERATED_DMG=$INSTALLER_FOLDER/$APP_DISPLAY_NAME\ $APP_SHORT_VERSION.dmg
+shopt -s nullglob
+DMG_CANDIDATES=("$INSTALLER_FOLDER"/*.dmg)
+shopt -u nullglob
+[ "${#DMG_CANDIDATES[@]}" -eq 1 ] || fail "create-dmg produced ${#DMG_CANDIDATES[@]} DMG candidates instead of exactly one"
+[ "${DMG_CANDIDATES[0]}" = "$GENERATED_DMG" ] || fail "create-dmg produced an unexpected filename: ${DMG_CANDIDATES[0]}"
+[ -f "$GENERATED_DMG" ] && [ ! -L "$GENERATED_DMG" ] || fail "create-dmg output is not one regular non-symlink file"
 mv "$GENERATED_DMG" "$CUSTOM_DMG"
+[ -f "$CUSTOM_DMG" ] && [ ! -L "$CUSTOM_DMG" ] || fail "release DMG rename failed"
+[ ! -e "$GENERATED_DMG" ] && [ ! -L "$GENERATED_DMG" ] || fail "generated DMG source remains after rename"
 
 ditto -c -k --sequesterRsrc --keepParent "$CUSTOM_APP" "$CUSTOM_ZIP"
 
