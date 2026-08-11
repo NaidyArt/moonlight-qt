@@ -19,13 +19,16 @@ Comportamiento
 - La selección sigue disponible y se guarda desde Ajustes > Renderer.
 - Se conserva el nombre de QSettings de Moonlight para reutilizar hosts,
   emparejamientos y el perfil 3456x2160/120/HEVC/HDR ya configurado.
+- Solo la clave de renderer es propia de esta variante: una selección previa
+  Auto/Metal de Moonlight oficial no cambia este valor ni es modificada.
 - El bundle ID y el nombre de la app son distintos, por lo que puede convivir
   con Moonlight oficial.
 - No contiene el experimento Metal asíncrono.
 
 Verificación en uso
 -------------------
-Abre las estadísticas durante un stream y confirma que el log muestra:
+Abre las estadísticas durante un stream y confirma que el log muestra
+exactamente:
 Renderer 'VideoToolbox (AVSampleBufferDisplayLayer)' chosen
 
 Rollback

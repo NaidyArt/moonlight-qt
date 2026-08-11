@@ -17,6 +17,8 @@ grep -Fq 'constexpr auto defaultRenderer = RendererSelection::RS_AVSBDL;' "$pref
   fail "macOS AVSampleBuffer default is missing"
 grep -Fq 'static_cast<int>(defaultRenderer)' "$prefs" ||
   fail "renderer setting does not use the variant default"
+grep -Fq '#define SER_RENDERER "rendererAvsbdlVariant"' "$prefs" ||
+  fail "custom renderer preference is not isolated from official Moonlight"
 grep -Fq '<string>art.naidy.moonlight-avsamplebuffer</string>' "$plist" ||
   fail "custom bundle identifier is missing"
 grep -Fq '<string>Moonlight AVSampleBuffer</string>' "$plist" ||

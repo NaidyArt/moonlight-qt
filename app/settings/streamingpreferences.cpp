@@ -51,7 +51,9 @@
 #define SER_CAPTURESYSKEYS "capturesyskeys"
 #define SER_KEEPAWAKE "keepawake"
 #define SER_LANGUAGE "language"
-#define SER_RENDERER "renderer"
+// Keep this candidate's renderer choice independent from official Moonlight
+// while sharing all other settings (hosts, pairings, and stream profile).
+#define SER_RENDERER "rendererAvsbdlVariant"
 
 #define CURRENT_DEFAULT_VER 2
 

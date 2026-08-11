@@ -18,12 +18,14 @@ reproducible across runner-image updates. Every produced artifact is bound by
 ## Deliberate changes
 
 1. macOS uses `RS_AVSBDL` when no renderer preference exists.
-2. Renderer selection remains visible and persistent. An explicit prior choice
-   is respected; this build does not silently overwrite it.
+2. Renderer selection remains visible and persistent under the variant-only
+   `rendererAvsbdlVariant` key. A prior Auto/Metal choice from official
+   Moonlight is neither imported nor overwritten.
 3. Bundle ID is `art.naidy.moonlight-avsamplebuffer`, display name is
    `Moonlight AVSampleBuffer`, and the installed bundle path is distinct.
 4. QSettings application name remains `Moonlight` so existing pairings, hosts,
-   and the validated 3456x2160/120/HEVC 10-bit HDR profile remain available.
+   and the validated 3456x2160/120/HEVC 10-bit HDR profile remain available;
+   only renderer selection is isolated.
 5. CI applies and verifies an ad-hoc signature. Notarization is not claimed.
 
 ## Measured reason for the default
@@ -44,6 +46,7 @@ It performs:
   scripts;
 - ad-hoc signing after renaming the app bundle;
 - bundle ID, display name, architecture, and deep-signature verification;
+- equality of the executable SHA-256 in the staged app, DMG, and app ZIP;
 - DMG and app ZIP packaging;
 - SHA-256 manifest verification; and
 - upload of the installer, portable app ZIP, recovery uninstaller, and README.

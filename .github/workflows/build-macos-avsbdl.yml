@@ -45,6 +45,13 @@ jobs:
       - name: Verify built app bundle
         run: bash scripts/verify-macos-avsbdl-bundle.sh 'build/build-Release/app/Moonlight AVSampleBuffer.app'
 
+      - name: Verify staged, DMG, and ZIP payload equality
+        run: >-
+          bash scripts/verify-macos-avsbdl-artifacts.sh
+          'build/build-Release/app/Moonlight AVSampleBuffer.app'
+          'build/installer-Release/Moonlight-AVSampleBuffer-6.1.0-avsbdl.dmg'
+          'build/installer-Release/Moonlight-AVSampleBuffer-6.1.0-avsbdl.app.zip'
+
       - name: Add rollback and documentation to release directory
         run: |
           cp 'release-macos/Desinstalar Moonlight AVSampleBuffer.command' build/installer-Release/
