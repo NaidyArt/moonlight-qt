@@ -71,6 +71,13 @@ macdeployqt $BUILD_FOLDER/app/Moonlight.app $EXTRA_ARGS -qmldir=$SOURCE_ROOT/app
 echo Removing dSYM files from app bundle
 find $BUILD_FOLDER/app/Moonlight.app/ -name '*.dSYM' | xargs rm -rf
 
+# The AVSampleBuffer wrapper reuses the official build and deployment path,
+# then performs its own rename, ad-hoc signing, and packaging.
+if [ "${SKIP_DMG:-0}" = "1" ]; then
+  echo "Skipping upstream signing and DMG creation as requested"
+  exit 0
+fi
+
 if [ "$SIGNING_IDENTITY" != "" ]; then
   echo Signing app bundle
   codesign --force --deep --options runtime --timestamp --sign "$SIGNING_IDENTITY" $BUILD_FOLDER/app/Moonlight.app || fail "Signing failed!"

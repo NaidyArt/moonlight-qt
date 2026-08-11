@@ -12,6 +12,40 @@ root=$(cd "$(dirname "$0")/.." && pwd)
 prefs=$root/app/settings/streamingpreferences.cpp
 plist=$root/app/Info.plist
 main=$root/app/main.cpp
+base_commit=2e13ed9977bc31c73caf8428f08f58d793313ece
+
+git -C "$root" cat-file -e "$base_commit^{commit}" 2>/dev/null ||
+  fail "pinned upstream base is unavailable"
+git -C "$root" merge-base --is-ancestor "$base_commit" HEAD ||
+  fail "candidate is not descended from the pinned upstream base"
+git -C "$root" diff --check "$base_commit"..HEAD ||
+  fail "candidate diff has whitespace errors"
+
+unexpected=0
+while IFS= read -r changed_path; do
+  case "$changed_path" in
+    .github/workflows/build-macos-avsbdl.yml|\
+    .github/workflows/build.yml|\
+    app/Info.plist|\
+    app/settings/streamingpreferences.cpp|\
+    docs/MACOS_AVSBDL_INSTALLABLE.md|\
+    'release-macos/Desinstalar Moonlight AVSampleBuffer.command'|\
+    release-macos/README.txt|\
+    scripts/generate-avsbdl-dmg.sh|\
+    scripts/generate-dmg.sh|\
+    scripts/verify-macos-avsbdl-artifacts.sh|\
+    scripts/verify-macos-avsbdl-bundle.sh|\
+    scripts/verify-macos-avsbdl-source.sh|\
+    tests/macos/test-avsbdl-packaging.sh|\
+    tests/macos/test-upstream-skip-dmg.sh)
+      ;;
+    *)
+      echo "Unexpected path changed from pinned base: $changed_path" >&2
+      unexpected=1
+      ;;
+  esac
+done < <(git -C "$root" diff --name-only "$base_commit"..HEAD)
+[ "$unexpected" -eq 0 ] || fail "candidate source allowlist failed"
 
 grep -Fq 'constexpr auto defaultRenderer = RendererSelection::RS_AVSBDL;' "$prefs" ||
   fail "macOS AVSampleBuffer default is missing"
@@ -25,6 +59,8 @@ grep -Fq '<string>Moonlight AVSampleBuffer</string>' "$plist" ||
   fail "custom display name is missing"
 grep -Fq 'QCoreApplication::setApplicationName("Moonlight");' "$main" ||
   fail "upstream QSettings identity changed; paired hosts would not be preserved"
+grep -Fq 'if [ "${SKIP_DMG:-0}" = "1" ]; then' "$root/scripts/generate-dmg.sh" ||
+  fail "official macOS build script lacks the isolated packaging handoff"
 
 metal_experiment_matches=$(find "$root/app" "$root/scripts" -type f \
   ! -name 'verify-macos-avsbdl-source.sh' \

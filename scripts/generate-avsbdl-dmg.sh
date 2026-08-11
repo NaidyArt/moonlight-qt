@@ -27,16 +27,14 @@ else
   VERSION=$(cat "$SOURCE_ROOT/app/version.txt")
 fi
 
-ORIGINAL_DMG=$INSTALLER_FOLDER/Moonlight-$VERSION.dmg
 CUSTOM_DMG_BASENAME="Moonlight-AVSampleBuffer-$VERSION.dmg"
 CUSTOM_DMG=$INSTALLER_FOLDER/$CUSTOM_DMG_BASENAME
 CUSTOM_ZIP=$INSTALLER_FOLDER/Moonlight-AVSampleBuffer-$VERSION.app.zip
 
-bash "$SOURCE_ROOT/scripts/generate-dmg.sh" "$BUILD_CONFIG"
+SKIP_DMG=1 bash "$SOURCE_ROOT/scripts/generate-dmg.sh" "$BUILD_CONFIG"
 
 [ -d "$ORIGINAL_APP" ] || fail "Upstream build did not produce Moonlight.app"
 [ ! -e "$CUSTOM_APP" ] || fail "Custom app path already exists"
-[ -f "$ORIGINAL_DMG" ] || fail "Upstream build did not produce its expected DMG"
 
 mv "$ORIGINAL_APP" "$CUSTOM_APP"
 
@@ -44,8 +42,6 @@ mv "$ORIGINAL_APP" "$CUSTOM_APP"
 # complete nested bundle has a coherent signature. This is not notarization.
 codesign --force --deep --sign - "$CUSTOM_APP"
 codesign --verify --deep --strict --verbose=2 "$CUSTOM_APP"
-
-rm -f "$ORIGINAL_DMG"
 
 if create-dmg "$CUSTOM_APP" "$INSTALLER_FOLDER" --no-version-in-filename; then
   CREATE_DMG_STATUS=0

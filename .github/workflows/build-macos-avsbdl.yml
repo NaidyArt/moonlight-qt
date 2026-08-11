@@ -22,10 +22,15 @@ jobs:
         uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
           submodules: recursive
-          fetch-depth: 1
+          fetch-depth: 0
 
       - name: Verify isolated source variant
         run: bash scripts/verify-macos-avsbdl-source.sh
+
+      - name: Run packaging control-flow fixtures
+        run: |
+          sh tests/macos/test-avsbdl-packaging.sh
+          bash tests/macos/test-upstream-skip-dmg.sh
 
       - name: Install create-dmg
         run: |

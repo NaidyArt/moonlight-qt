@@ -42,8 +42,9 @@ Run the manually dispatched `Build macOS AVSampleBuffer candidate` workflow.
 It performs:
 
 - source-isolation checks;
-- a universal Release build using Moonlight's official dependency and DMG
-  scripts;
+- a universal Release build using Moonlight's official dependency and
+  deployment path; its script stops after `macdeployqt`, before upstream
+  signing/DMG, and hands the staged app to the isolated variant packager;
 - ad-hoc signing after renaming the app bundle;
 - bundle ID, display name, architecture, and deep-signature verification;
 - equality of the executable SHA-256 in the staged app, DMG, and app ZIP;

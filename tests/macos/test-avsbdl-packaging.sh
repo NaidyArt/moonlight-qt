@@ -16,7 +16,7 @@ set -eu
 mkdir -p build/build-Release/app/Moonlight.app/Contents/MacOS build/installer-Release
 printf '#!/bin/sh\n' > build/build-Release/app/Moonlight.app/Contents/MacOS/Moonlight
 chmod 0755 build/build-Release/app/Moonlight.app/Contents/MacOS/Moonlight
-: > "build/installer-Release/Moonlight-${CI_VERSION}.dmg"
+[ "${SKIP_DMG:-0}" = "1" ]
 EOF
 
 cat > "$fixture/mock-bin/codesign" <<'EOF'
