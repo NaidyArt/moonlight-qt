@@ -5,6 +5,8 @@ permissions:
 
 on:
   push:
+    branches-ignore:
+      - codex/macos-avsbdl-installable
   pull_request:
     branches:
       - master

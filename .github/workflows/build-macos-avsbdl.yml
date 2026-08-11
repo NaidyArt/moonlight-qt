@@ -5,6 +5,9 @@ permissions:
   contents: read
 
 on:
+  push:
+    branches:
+      - codex/macos-avsbdl-installable
   workflow_dispatch:
 
 jobs:
