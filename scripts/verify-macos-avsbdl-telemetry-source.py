@@ -469,6 +469,14 @@ def main() -> None:
         cursor = late_handoff_test.find(marker, cursor + 1)
         if cursor < 0:
             fail(f"late-withdrawal ON handoff fixture is missing ordered barrier: {marker}")
+    retoggle_test = function_body(tests_cpp, "void retoggleCreatesNewSession()")
+    second_session_position = retoggle_test.find("const QString secondSession")
+    second_record_position = retoggle_test.find(
+        'record.value(QStringLiteral("session_id")).toString() == secondSession'
+    )
+    second_off_position = retoggle_test.rfind("telemetry.setOverlayActive(false)")
+    if not (0 <= second_session_position < second_record_position < second_off_position):
+        fail("retoggle fixture does not wait for the second session record before OFF")
     test_main = function_body(tests_cpp, "int main(int argc, char** argv)")
     if not (0 <= test_main.find("QCoreApplication application") <
             test_main.find("teardownBlocker->unblock()")):

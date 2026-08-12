@@ -916,7 +916,15 @@ private slots:
         QTRY_VERIFY_WITH_TIMEOUT(telemetry.isFileOpen(), 2000);
         const QString secondSession = telemetry.currentSessionId();
         QVERIFY(telemetry.publish(sample()));
-        QTRY_VERIFY_WITH_TIMEOUT(readRecords(options.directoryPath).size() >= 2, 2000);
+        const auto secondSessionWasWritten = [&]() {
+            for (const QJsonObject& record : readRecords(options.directoryPath)) {
+                if (record.value(QStringLiteral("session_id")).toString() == secondSession) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        QTRY_VERIFY_WITH_TIMEOUT(secondSessionWasWritten(), 2000);
         telemetry.setOverlayActive(false);
         QTRY_VERIFY_WITH_TIMEOUT(!telemetry.isFileOpen(), 2000);
 
