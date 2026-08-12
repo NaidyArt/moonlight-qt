@@ -1,7 +1,6 @@
 #pragma once
 
 #include <QByteArray>
-#include <QMutex>
 #include <QString>
 
 #include <array>
@@ -20,7 +19,7 @@ public:
     };
 
     // This is intentionally a fixed-size POD. publish() runs on the video
-    // submission path and copies it into a lock-free SPSC queue.
+    // submission path and copies it into a bounded SPSC queue.
     struct Sample {
         std::int64_t capturedAtUnixMs = 0;
         std::uint64_t sourceWindowSequence = 0;
@@ -53,11 +52,46 @@ public:
         std::uint32_t lastRttVarianceMs = 0;
     };
 
+    enum class IoOperation {
+        WorkerStart,
+        StartPublished,
+        StartRelease,
+        Write,
+        Flush,
+        Sync,
+    };
+
+    // Test-only fault injection boundary. Production leaves this null. Actual
+    // I/O hooks execute exclusively on the worker. WorkerStart and the two
+    // Start* lifecycle barriers execute on the starter so tests can force
+    // races and prove that OFF never waits for ON.
+    class IoFaultInjector
+    {
+    public:
+        virtual ~IoFaultInjector() = default;
+        virtual bool beforeIo(IoOperation operation,
+                              const std::atomic<bool>& stopRequested) = 0;
+    };
+
+    enum class IoError {
+        None = 0,
+        Directory,
+        Rotation,
+        Open,
+        Write,
+        Flush,
+        Sync,
+        WorkerStart,
+        WorkerException,
+        OutstandingSessionLimit,
+    };
+
     struct Options {
         QString directoryPath;
         int sampleIntervalMs = 1000;
         int maxFileCount = 8;
         std::int64_t maxFileBytes = 4 * 1024 * 1024;
+        std::shared_ptr<IoFaultInjector> ioFaultInjector;
     };
 
     StatsTelemetry();
@@ -74,38 +108,33 @@ public:
     void setGloballyEnabled(bool enabled);
     void setOverlayActive(bool active);
 
-    // Lock-free and allocation-free. Returns false when telemetry is inactive
-    // or the bounded queue is full. Streaming always continues either way.
+    // Allocation-free, lock-free, and I/O-free. Returns false when telemetry
+    // is inactive or the bounded queue is full. Streaming always continues.
     bool publish(const Sample& sample) noexcept;
 
     bool isSessionActive() const noexcept;
     bool isFileOpen() const noexcept;
     QString currentSessionId() const;
+    std::uint64_t ioErrorCount() const noexcept;
+    IoError lastIoError() const noexcept;
+    std::uint64_t completedSessionCount() const noexcept;
+    std::uint64_t nativeSyncCallCountForTests() const noexcept;
+
+    // Lifetime observability for regression tests. Detached workers own all
+    // of their state, so this may remain non-zero briefly after an async stop.
+    static int liveWorkerCountForTests() noexcept;
+    static int liveSessionCountForTests() noexcept;
 
 private:
-    class WriterThread;
+    class ControlState;
+    class SessionState;
 
-    static constexpr std::uint32_t QueueCapacity = 16;
+    static bool shouldRun(const ControlState* control) noexcept;
+    static void reconcile(const std::shared_ptr<ControlState>& control) noexcept;
+    static void tryStart(const std::shared_ptr<ControlState>& control) noexcept;
+    static bool releaseStart(const std::shared_ptr<ControlState>& control,
+                             std::uint64_t ownedLifecycleEpoch) noexcept;
+    static void stop(ControlState* control) noexcept;
 
-    void reconcileLocked();
-    void startLocked();
-    void stopLocked();
-    bool dequeue(Sample& sample) noexcept;
-
-    Options m_Options;
-    StreamConfig m_StreamConfig;
-    mutable QMutex m_LifecycleMutex;
-    std::unique_ptr<WriterThread> m_Writer;
-
-    std::array<Sample, QueueCapacity> m_Queue = {};
-    std::atomic<std::uint32_t> m_WritePosition {0};
-    std::atomic<std::uint32_t> m_ReadPosition {0};
-    std::atomic<std::uint64_t> m_SourceWindowSequence {0};
-    std::atomic<std::uint64_t> m_QueueDroppedSamples {0};
-    std::atomic<std::uint64_t> m_SessionGeneration {0};
-    std::atomic<std::uint32_t> m_ActivePublishers {0};
-    std::atomic<bool> m_AcceptingSamples {false};
-    std::atomic<bool> m_GlobalEnabled {false};
-    std::atomic<bool> m_OverlayActive {false};
-    std::atomic<bool> m_FileOpen {false};
+    std::shared_ptr<ControlState> m_Control;
 };

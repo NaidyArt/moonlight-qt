@@ -2343,8 +2343,9 @@ void Session::exec()
     }
 
 DispatchDeferredCleanup:
-    // This state transition synchronously stops, flushes, and closes structured
-    // telemetry before the decoder and session begin shutting down.
+    // This state transition synchronously rejects structured telemetry. Any
+    // flush/fsync/close is owned by detached session state and cannot block
+    // decoder or Session shutdown.
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, false);
 
     // Switch back to synchronous logging mode

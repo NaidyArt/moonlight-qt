@@ -29,7 +29,8 @@ reproducible across runner-image updates. Every produced artifact is bound by
 5. CI applies and verifies an ad-hoc signature. Notarization is not claimed.
 6. While the performance overlay is actually visible, the variant can write a
    private, bounded 1 Hz JSONL stream containing the same rolling statistics.
-   Hiding the overlay synchronously flushes and closes it; see
+   Hiding the overlay synchronously stops publication and hands asynchronous
+   flush/`fsync`/close to self-owned worker state; see
    `docs/MACOS_AVSBDL_TELEMETRY.md` for the exact schema and rollback.
 
 ## Measured reason for the default
