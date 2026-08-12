@@ -10,6 +10,7 @@
 #include "video/decoder.h"
 #include "audio/renderers/renderer.h"
 #include "video/overlaymanager.h"
+#include "video/statstelemetry.h"
 
 class SupportedVideoFormatList : public QList<int>
 {
@@ -89,7 +90,7 @@ public:
     }
 };
 
-class Session : public QObject
+class Session : public QObject, public Overlay::IOverlayStateListener
 {
     Q_OBJECT
 
@@ -121,6 +122,11 @@ public:
         return m_OverlayManager;
     }
 
+    StatsTelemetry& getStatsTelemetry()
+    {
+        return m_StatsTelemetry;
+    }
+
     void flushWindowEvents();
 
     void setShouldExit(bool quitHostApp = false);
@@ -144,6 +150,8 @@ signals:
     void launchWarningsChanged();
 
 private:
+    void notifyOverlayStateChanged(Overlay::OverlayType type, bool enabled) override;
+
     void exec();
 
     bool startConnectionAsync();
@@ -280,6 +288,7 @@ private:
     int m_AudioSampleCount;
     Uint32 m_DropAudioEndTime;
 
+    StatsTelemetry m_StatsTelemetry;
     Overlay::OverlayManager m_OverlayManager;
 
     static CONNECTION_LISTENER_CALLBACKS k_ConnCallbacks;

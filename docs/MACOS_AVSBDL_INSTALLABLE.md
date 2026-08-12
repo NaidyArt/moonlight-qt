@@ -27,6 +27,10 @@ reproducible across runner-image updates. Every produced artifact is bound by
    and the validated 3456x2160/120/HEVC 10-bit HDR profile remain available;
    only renderer selection is isolated.
 5. CI applies and verifies an ad-hoc signature. Notarization is not claimed.
+6. While the performance overlay is actually visible, the variant can write a
+   private, bounded 1 Hz JSONL stream containing the same rolling statistics.
+   Hiding the overlay synchronously flushes and closes it; see
+   `docs/MACOS_AVSBDL_TELEMETRY.md` for the exact schema and rollback.
 
 ## Measured reason for the default
 
@@ -42,6 +46,7 @@ Run the manually dispatched `Build macOS AVSampleBuffer candidate` workflow.
 It performs:
 
 - source-isolation checks;
+- structured telemetry source audit and macOS unit tests;
 - a universal Release build using Moonlight's official dependency and
   deployment path; its script stops after `macdeployqt`, before upstream
   signing/DMG, and hands the staged app to the isolated variant packager;
@@ -57,6 +62,7 @@ Local platform-independent checks:
 ```sh
 bash scripts/verify-macos-avsbdl-source.sh
 sh tests/macos/test-avsbdl-packaging.sh
+python3 scripts/verify-macos-avsbdl-telemetry-source.py
 ```
 
 ## Mac-side acceptance gate

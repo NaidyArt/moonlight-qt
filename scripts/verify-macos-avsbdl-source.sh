@@ -27,8 +27,21 @@ while IFS= read -r changed_path; do
     .github/workflows/build-macos-avsbdl.yml|\
     .github/workflows/build.yml|\
     app/Info.plist|\
+    app/app.pro|\
+    app/gui/SettingsView.qml|\
     app/settings/streamingpreferences.cpp|\
+    app/settings/streamingpreferences.h|\
+    app/streaming/session.cpp|\
+    app/streaming/session.h|\
+    app/streaming/video/ffmpeg.cpp|\
+    app/streaming/video/ffmpeg.h|\
+    app/streaming/video/overlaymanager.cpp|\
+    app/streaming/video/overlaymanager.h|\
+    app/streaming/video/statstelemetry.cpp|\
+    app/streaming/video/statstelemetry.h|\
     docs/MACOS_AVSBDL_INSTALLABLE.md|\
+    docs/MACOS_AVSBDL_TELEMETRY.md|\
+    docs/MACOS_AVSBDL_TELEMETRY_REVIEW.md|\
     'release-macos/Desinstalar Moonlight AVSampleBuffer.command'|\
     release-macos/README.txt|\
     scripts/generate-avsbdl-dmg.sh|\
@@ -36,8 +49,11 @@ while IFS= read -r changed_path; do
     scripts/verify-macos-avsbdl-artifacts.sh|\
     scripts/verify-macos-avsbdl-bundle.sh|\
     scripts/verify-macos-avsbdl-source.sh|\
+    scripts/verify-macos-avsbdl-telemetry-source.py|\
     tests/macos/test-avsbdl-packaging.sh|\
-    tests/macos/test-upstream-skip-dmg.sh)
+    tests/macos/test-upstream-skip-dmg.sh|\
+    tests/macos/telemetry/telemetry.pro|\
+    tests/macos/telemetry/test-statstelemetry.cpp)
       ;;
     *)
       echo "Unexpected path changed from pinned base: $changed_path" >&2
@@ -68,10 +84,13 @@ grep -Fq '[ "${#DMG_CANDIDATES[@]}" -eq 1 ]' "$root/scripts/generate-avsbdl-dmg.
 
 metal_experiment_matches=$(find "$root/app" "$root/scripts" -type f \
   ! -name 'verify-macos-avsbdl-source.sh' \
+  ! -name 'verify-macos-avsbdl-telemetry-source.py' \
   -exec grep -n -E 'VT_METAL_(ASYNC|MAX)|vt_metal_latency_config' {} + || true)
 if [ -n "$metal_experiment_matches" ]; then
   echo "$metal_experiment_matches" >&2
   fail "experimental Metal tuning leaked into the clean AVSampleBuffer branch"
 fi
+
+python3 "$root/scripts/verify-macos-avsbdl-telemetry-source.py"
 
 echo "PASS: source defaults to persistent AVSampleBuffer with a separate macOS bundle identity"

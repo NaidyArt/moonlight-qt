@@ -52,6 +52,10 @@ private:
 
     void stringifyVideoStats(VIDEO_STATS& stats, char* output, int length);
 
+    const char* getVideoCodecString(bool hdrEnabled) const;
+
+    void publishStatsTelemetry(const VIDEO_STATS& stats);
+
     void logVideoStats(VIDEO_STATS& stats, const char* title);
 
     void addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst);

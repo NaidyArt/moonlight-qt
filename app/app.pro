@@ -203,6 +203,7 @@ SOURCES += \
     settings/mappingmanager.cpp \
     gui/sdlgamepadkeynavigation.cpp \
     streaming/video/overlaymanager.cpp \
+    streaming/video/statstelemetry.cpp \
     backend/systemproperties.cpp \
     wm.cpp
 
@@ -241,6 +242,7 @@ HEADERS += \
     settings/mappingmanager.h \
     gui/sdlgamepadkeynavigation.h \
     streaming/video/overlaymanager.h \
+    streaming/video/statstelemetry.h \
     backend/systemproperties.h
 
 # Platform-specific renderers and decoders

@@ -8,6 +8,7 @@ on:
   push:
     branches:
       - codex/macos-avsbdl-installable
+      - codex/macos-avsbdl-overlay-telemetry
   workflow_dispatch:
 
 jobs:
@@ -43,6 +44,14 @@ jobs:
           cache: true
           version: 6.11.1
           aqtsource: git+https://github.com/miurahr/aqtinstall.git@073e34d7c2ab4ae6961ed7cca690b3abd5ba5a7e
+
+      - name: Build and run structured telemetry unit tests
+        run: |
+          mkdir -p build/telemetry-tests
+          cd build/telemetry-tests
+          qmake "$GITHUB_WORKSPACE/tests/macos/telemetry/telemetry.pro"
+          make -j"$(sysctl -n hw.logicalcpu)"
+          ./test-statstelemetry
 
       - name: Build universal app, apply ad-hoc signature, and package
         run: bash scripts/generate-avsbdl-dmg.sh Release

@@ -7,6 +7,7 @@ on:
   push:
     branches-ignore:
       - codex/macos-avsbdl-installable
+      - codex/macos-avsbdl-overlay-telemetry
   pull_request:
     branches:
       - master

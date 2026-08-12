@@ -13,6 +13,8 @@ extern "C" {
 #include "ffmpeg-renderers/sdlvid.h"
 #include "ffmpeg-renderers/genhwaccel.h"
 
+#include <QDateTime>
+
 #ifdef Q_OS_WIN32
 #include "ffmpeg-renderers/dxva2.h"
 #include "ffmpeg-renderers/d3d11va.h"
@@ -802,82 +804,97 @@ void FFmpegVideoDecoder::addVideoStats(VIDEO_STATS& src, VIDEO_STATS& dst)
     dst.renderedFps     = (double)dst.renderedFrames / timeDiffSecs;
 }
 
+const char* FFmpegVideoDecoder::getVideoCodecString(bool hdrEnabled) const
+{
+    switch (m_VideoFormat)
+    {
+    case VIDEO_FORMAT_H264:
+        return "H.264";
+
+    case VIDEO_FORMAT_H264_HIGH8_444:
+        return "H.264 4:4:4";
+
+    case VIDEO_FORMAT_H265:
+        return "HEVC";
+
+    case VIDEO_FORMAT_H265_REXT8_444:
+        return "HEVC 4:4:4";
+
+    case VIDEO_FORMAT_H265_MAIN10:
+        return hdrEnabled ? "HEVC 10-bit HDR" : "HEVC 10-bit SDR";
+
+    case VIDEO_FORMAT_H265_REXT10_444:
+        return hdrEnabled ? "HEVC 10-bit HDR 4:4:4" : "HEVC 10-bit SDR 4:4:4";
+
+    case VIDEO_FORMAT_AV1_MAIN8:
+        return "AV1";
+
+    case VIDEO_FORMAT_AV1_HIGH8_444:
+        return "AV1 4:4:4";
+
+    case VIDEO_FORMAT_AV1_MAIN10:
+        return hdrEnabled ? "AV1 10-bit HDR" : "AV1 10-bit SDR";
+
+    case VIDEO_FORMAT_AV1_HIGH10_444:
+        return hdrEnabled ? "AV1 10-bit HDR 4:4:4" : "AV1 10-bit SDR 4:4:4";
+
+    default:
+        SDL_assert(false);
+        return "UNKNOWN";
+    }
+}
+
+void FFmpegVideoDecoder::publishStatsTelemetry(const VIDEO_STATS& stats)
+{
+#ifdef Q_OS_DARWIN
+    StatsTelemetry::Sample sample;
+    sample.capturedAtUnixMs = QDateTime::currentMSecsSinceEpoch();
+    sample.measurementStartUs = stats.measurementStartUs;
+    const std::uint64_t nowUs = LiGetMicroseconds();
+    sample.measurementDurationUs = nowUs >= stats.measurementStartUs ? nowUs - stats.measurementStartUs : 0;
+
+    sample.hdr = LiGetCurrentHostDisplayHdrMode();
+    SDL_utf8strlcpy(sample.codec.data(), getVideoCodecString(sample.hdr), sample.codec.size());
+
+    sample.totalFps = stats.totalFps;
+    sample.receivedFps = stats.receivedFps;
+    sample.decodedFps = stats.decodedFps;
+    sample.renderedFps = stats.renderedFps;
+
+    sample.receivedFrames = stats.receivedFrames;
+    sample.decodedFrames = stats.decodedFrames;
+    sample.renderedFrames = stats.renderedFrames;
+    sample.totalFrames = stats.totalFrames;
+    sample.networkDroppedFrames = stats.networkDroppedFrames;
+    sample.pacerDroppedFrames = stats.pacerDroppedFrames;
+    sample.minHostProcessingLatency = stats.minHostProcessingLatency;
+    sample.maxHostProcessingLatency = stats.maxHostProcessingLatency;
+    sample.totalHostProcessingLatency = stats.totalHostProcessingLatency;
+    sample.framesWithHostProcessingLatency = stats.framesWithHostProcessingLatency;
+    sample.totalReassemblyTimeUs = stats.totalReassemblyTimeUs;
+    sample.totalDecodeTimeUs = stats.totalDecodeTimeUs;
+    sample.totalPacerTimeUs = stats.totalPacerTimeUs;
+    sample.totalRenderTimeUs = stats.totalRenderTimeUs;
+    sample.lastRttMs = stats.lastRtt;
+    sample.lastRttVarianceMs = stats.lastRttVariance;
+
+    // publish() is a bounded, lock-free POD copy. Any telemetry failure is
+    // deliberately ignored so it can never affect streaming.
+    Session::get()->getStatsTelemetry().publish(sample);
+#else
+    Q_UNUSED(stats);
+#endif
+}
+
 void FFmpegVideoDecoder::stringifyVideoStats(VIDEO_STATS& stats, char* output, int length)
 {
     int offset = 0;
-    const char* codecString;
+    const bool hdrEnabled = LiGetCurrentHostDisplayHdrMode();
+    const char* codecString = getVideoCodecString(hdrEnabled);
     int ret;
 
     // Start with an empty string
     output[offset] = 0;
-
-    switch (m_VideoFormat)
-    {
-    case VIDEO_FORMAT_H264:
-        codecString = "H.264";
-        break;
-
-    case VIDEO_FORMAT_H264_HIGH8_444:
-        codecString = "H.264 4:4:4";
-        break;
-
-    case VIDEO_FORMAT_H265:
-        codecString = "HEVC";
-        break;
-
-    case VIDEO_FORMAT_H265_REXT8_444:
-        codecString = "HEVC 4:4:4";
-        break;
-
-    case VIDEO_FORMAT_H265_MAIN10:
-        if (LiGetCurrentHostDisplayHdrMode()) {
-            codecString = "HEVC 10-bit HDR";
-        }
-        else {
-            codecString = "HEVC 10-bit SDR";
-        }
-        break;
-
-    case VIDEO_FORMAT_H265_REXT10_444:
-        if (LiGetCurrentHostDisplayHdrMode()) {
-            codecString = "HEVC 10-bit HDR 4:4:4";
-        }
-        else {
-            codecString = "HEVC 10-bit SDR 4:4:4";
-        }
-        break;
-
-    case VIDEO_FORMAT_AV1_MAIN8:
-        codecString = "AV1";
-        break;
-
-    case VIDEO_FORMAT_AV1_HIGH8_444:
-        codecString = "AV1 4:4:4";
-        break;
-
-    case VIDEO_FORMAT_AV1_MAIN10:
-        if (LiGetCurrentHostDisplayHdrMode()) {
-            codecString = "AV1 10-bit HDR";
-        }
-        else {
-            codecString = "AV1 10-bit SDR";
-        }
-        break;
-
-    case VIDEO_FORMAT_AV1_HIGH10_444:
-        if (LiGetCurrentHostDisplayHdrMode()) {
-            codecString = "AV1 10-bit HDR 4:4:4";
-        }
-        else {
-            codecString = "AV1 10-bit SDR 4:4:4";
-        }
-        break;
-
-    default:
-        SDL_assert(false);
-        codecString = "UNKNOWN";
-        break;
-    }
 
     if (stats.receivedFps > 0) {
         if (m_VideoDecoderCtx != nullptr) {
@@ -2130,6 +2147,7 @@ int FFmpegVideoDecoder::submitDecodeUnit(PDECODE_UNIT du)
                                 Session::get()->getOverlayManager().getOverlayText(Overlay::OverlayDebug),
                                 Session::get()->getOverlayManager().getOverlayMaxTextLength());
             Session::get()->getOverlayManager().setOverlayTextUpdated(Overlay::OverlayDebug);
+            publishStatsTelemetry(lastTwoWndStats);
         }
 
         // Accumulate these values into the global stats

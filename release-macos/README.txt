@@ -24,6 +24,10 @@ Comportamiento
 - El bundle ID y el nombre de la app son distintos, por lo que puede convivir
   con Moonlight oficial.
 - No contiene el experimento Metal asíncrono.
+- Mientras el overlay de estadísticas esté visible, guarda JSONL privado a
+  1 Hz en ~/Library/Logs/Moonlight AVSampleBuffer/. Al ocultarlo, cierra el
+  fichero inmediatamente. Se puede desactivar en Ajustes sin desactivar el
+  overlay.
 
 Verificación en uso
 -------------------

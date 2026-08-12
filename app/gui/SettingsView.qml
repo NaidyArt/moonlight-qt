@@ -1810,6 +1810,23 @@ Flickable {
                                   qsTr("You can toggle it at any time while streaming using Ctrl+Alt+Shift+S or Select+L1+R1+X.") + "\n\n" +
                                   qsTr("The performance overlay is not supported on Steam Link or Raspberry Pi.")
                 }
+
+                CheckBox {
+                    id: enableStatsTelemetry
+                    width: parent.width
+                    visible: SystemProperties.isDarwin
+                    text: qsTr("Save performance stats while the overlay is visible")
+                    font.pointSize: 12
+                    checked: StreamingPreferences.enableStatsTelemetry
+                    onCheckedChanged: {
+                        StreamingPreferences.enableStatsTelemetry = checked
+                    }
+
+                    ToolTip.delay: 1000
+                    ToolTip.timeout: 5000
+                    ToolTip.visible: hovered
+                    ToolTip.text: qsTr("Writes a private JSONL sample once per second only while the performance overlay is visible. Hiding the overlay closes the file immediately.")
+                }
             }
         }
     }

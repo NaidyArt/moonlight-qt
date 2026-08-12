@@ -581,11 +581,23 @@ Session::Session(NvComputer* computer, NvApp& app, StreamingPreferences *prefere
       m_ShouldExit(false),
       m_AsyncConnectionSuccess(false),
       m_PortTestResults(0),
+      m_ActiveVideoFormat(0),
+      m_ActiveVideoWidth(0),
+      m_ActiveVideoHeight(0),
+      m_ActiveVideoFrameRate(0),
       m_OpusDecoder(nullptr),
       m_AudioRenderer(nullptr),
       m_AudioSampleCount(0),
       m_DropAudioEndTime(0)
 {
+    m_OverlayManager.setOverlayStateListener(this);
+
+#ifdef Q_OS_DARWIN
+    const bool telemetryEnabled = m_Preferences->enableStatsTelemetry &&
+                                  StatsTelemetry::environmentAllowsTelemetry(
+                                      qgetenv("MOONLIGHT_AVSBDL_TELEMETRY"));
+    m_StatsTelemetry.setGloballyEnabled(telemetryEnabled);
+#endif
 }
 
 Session::~Session()
@@ -593,7 +605,21 @@ Session::~Session()
     // NB: This may not get destroyed for a long time! Don't put any non-trivial cleanup here.
     // Use Session::exec() or DeferredSessionCleanupTask instead.
 
+    m_OverlayManager.setOverlayStateListener(nullptr);
+    m_StatsTelemetry.setOverlayActive(false);
     SDL_DestroyMutex(m_DecoderLock);
+}
+
+void Session::notifyOverlayStateChanged(Overlay::OverlayType type, bool enabled)
+{
+#ifdef Q_OS_DARWIN
+    if (type == Overlay::OverlayDebug) {
+        m_StatsTelemetry.setOverlayActive(enabled);
+    }
+#else
+    Q_UNUSED(type);
+    Q_UNUSED(enabled);
+#endif
 }
 
 bool Session::initialize(QQuickWindow* qtWindow)
@@ -1954,6 +1980,15 @@ void Session::exec()
     // Start rich presence to indicate we're in game
     RichPresenceManager presence(*m_Preferences, m_App.name);
 
+    // Configure telemetry before toggling the overlay. No telemetry thread,
+    // periodic wakeup, or file exists until OverlayDebug becomes visible.
+    StatsTelemetry::StreamConfig telemetryConfig;
+    telemetryConfig.width = m_ActiveVideoWidth;
+    telemetryConfig.height = m_ActiveVideoHeight;
+    telemetryConfig.configuredFps = m_ActiveVideoFrameRate;
+    telemetryConfig.requestedBitrateKbps = m_StreamConfig.bitrate;
+    m_StatsTelemetry.configure(telemetryConfig);
+
     // Toggle the stats overlay if requested by the user
     m_OverlayManager.setOverlayState(Overlay::OverlayDebug, m_Preferences->showPerformanceOverlay);
 
@@ -2308,6 +2343,10 @@ void Session::exec()
     }
 
 DispatchDeferredCleanup:
+    // This state transition synchronously stops, flushes, and closes structured
+    // telemetry before the decoder and session begin shutting down.
+    m_OverlayManager.setOverlayState(Overlay::OverlayDebug, false);
+
     // Switch back to synchronous logging mode
     StreamUtils::exitAsyncLoggingMode();
 

@@ -21,6 +21,14 @@ public:
     virtual void notifyOverlayUpdated(OverlayType type) = 0;
 };
 
+class IOverlayStateListener
+{
+public:
+    virtual ~IOverlayStateListener() = default;
+
+    virtual void notifyOverlayStateChanged(OverlayType type, bool enabled) = 0;
+};
+
 class OverlayManager
 {
 public:
@@ -38,6 +46,7 @@ public:
     SDL_Surface* getUpdatedOverlaySurface(OverlayType type);
 
     void setOverlayRenderer(IOverlayRenderer* renderer);
+    void setOverlayStateListener(IOverlayStateListener* listener);
 
 private:
     void notifyOverlayUpdated(OverlayType type);
@@ -53,6 +62,7 @@ private:
         SDL_Surface* surface;
     } m_Overlays[OverlayMax];
     IOverlayRenderer* m_Renderer;
+    IOverlayStateListener* m_StateListener;
     QByteArray m_FontData;
 };
 

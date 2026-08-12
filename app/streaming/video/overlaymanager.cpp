@@ -5,6 +5,7 @@ using namespace Overlay;
 
 OverlayManager::OverlayManager() :
     m_Renderer(nullptr),
+    m_StateListener(nullptr),
     m_FontData(Path::readDataFile("ModeSeven.ttf"))
 {
     memset(m_Overlays, 0, sizeof(m_Overlays));
@@ -97,6 +98,10 @@ void OverlayManager::setOverlayState(OverlayType type, bool enabled)
     m_Overlays[type].enabled = enabled;
 
     if (stateChanged) {
+        if (m_StateListener != nullptr) {
+            m_StateListener->notifyOverlayStateChanged(type, enabled);
+        }
+
         if (!enabled) {
             // Set the text to empty string on disable
             m_Overlays[type].text[0] = 0;
@@ -114,6 +119,11 @@ SDL_Color OverlayManager::getOverlayColor(OverlayType type)
 void OverlayManager::setOverlayRenderer(IOverlayRenderer* renderer)
 {
     m_Renderer = renderer;
+}
+
+void OverlayManager::setOverlayStateListener(IOverlayStateListener* listener)
+{
+    m_StateListener = listener;
 }
 
 void OverlayManager::notifyOverlayUpdated(OverlayType type)
