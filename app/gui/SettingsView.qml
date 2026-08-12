@@ -1825,7 +1825,7 @@ Flickable {
                     ToolTip.delay: 1000
                     ToolTip.timeout: 5000
                     ToolTip.visible: hovered
-                    ToolTip.text: qsTr("Writes a private JSONL sample once per second only while the performance overlay is visible. Hiding the overlay closes the file immediately.")
+                    ToolTip.text: qsTr("Writes a private JSONL sample once per second only while the performance overlay is visible. Hiding the overlay stops accepting and writing samples immediately; a background worker flushes, fsyncs, and closes the file asynchronously.")
                 }
             }
         }
